@@ -26,7 +26,7 @@
         No SAML connections yet
       </h4>
       <p class="text-neutral-500 mb-6 max-w-md mx-auto">
-        Configure your first SAML connection to enable single sign-on for your workspace. Each connection can be tied to one verified email domain, which we use to route incoming users to the correct workspace when they start login.
+        Configure your first SAML connection to enable single sign-on for your workspace.
       </p>
       <UButton
         v-if="canManageConnections"
