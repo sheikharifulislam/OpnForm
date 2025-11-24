@@ -59,7 +59,7 @@ class OidcConnectionController extends Controller
         }
 
         $connection = IdentityConnection::create($data);
-        
+
         telemetry(TelemetryEvent::SSO_CREATED);
 
         return response()->json($this->formatConnection($connection), 201);
