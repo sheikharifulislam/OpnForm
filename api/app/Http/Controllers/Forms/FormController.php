@@ -52,7 +52,7 @@ class FormController extends Controller
                 'updated_at',
             ])
             ->with(['workspace'])
-            ->withCount(['submissions as submissions_count' => fn ($q) => $q->where('status', FormSubmission::STATUS_COMPLETED)])
+            ->withCount(['submissions as submissions_count' => fn($q) => $q->where('status', FormSubmission::STATUS_COMPLETED)])
             ->withTotalViews()
             ->orderByDesc('updated_at')
             ->paginate(10);
