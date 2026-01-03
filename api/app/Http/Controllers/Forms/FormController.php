@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreFormRequest;
 use App\Http\Requests\UpdateFormRequest;
 use App\Http\Requests\UploadAssetRequest;
+use App\Http\Resources\FormListResource;
 use App\Http\Resources\FormResource;
 use App\Models\Forms\Form;
 use App\Models\Forms\FormSubmission;
@@ -35,21 +36,28 @@ class FormController extends Controller
         $this->authorize('ownsWorkspace', $workspace);
         $this->authorize('viewAny', Form::class);
 
+        // Select only columns needed for FormListResource (excludes heavy 'properties' and 'removed_properties')
         $forms = $workspace->forms()
-            ->with(['workspace.users' => fn ($q) => $q->withPivot('role')])
-            ->withCount(['submissions as submissions_count' => fn ($q) => $q->where('status', FormSubmission::STATUS_COMPLETED)])
+            ->select([
+                'id',
+                'slug',
+                'title',
+                'visibility',
+                'tags',
+                'closes_at',
+                'max_submissions_count',
+                'workspace_id',
+                'custom_domain',
+                'created_at',
+                'updated_at',
+            ])
+            ->with(['workspace'])
+            ->withCount(['submissions as submissions_count' => fn($q) => $q->where('status', FormSubmission::STATUS_COMPLETED)])
             ->withTotalViews()
             ->orderByDesc('updated_at')
             ->paginate(10);
 
-        $formCollection = FormResource::collection($forms);
-        $formCollection->each(function ($formResource) {
-            $formResource->setCleanings(
-                $this->formCleaner->processForm(request(), $formResource->resource)->simulateCleaning($formResource->resource->workspace)->getPerformedCleanings()
-            );
-        });
-
-        return $formCollection;
+        return FormListResource::collection($forms);
     }
 
     public function show(Form $form)
