@@ -142,10 +142,14 @@ class FormController extends Controller
             ->simulateCleaning($form->workspace)
             ->getData();
 
-        // Set Removed Properties
-        $formData['removed_properties'] = array_merge($form->removed_properties, collect($form->properties)->filter(function ($field) use ($formData) {
-            return !Str::of($field['type'])->startsWith('nf-') && !in_array($field['id'], collect($formData['properties'])->pluck('id')->toArray());
-        })->toArray());
+        // Set Removed Properties (pre-compute lookup set to avoid O(n²) complexity)
+        $newPropertyIds = collect($formData['properties'])->pluck('id')->flip()->all();
+        $formData['removed_properties'] = array_merge(
+            $form->removed_properties,
+            collect($form->properties)->filter(function ($field) use ($newPropertyIds) {
+                return !Str::of($field['type'])->startsWith('nf-') && !isset($newPropertyIds[$field['id']]);
+            })->toArray()
+        );
 
         $form->slug = (config('app.self_hosted') && !empty($formData['slug'])) ? $formData['slug'] : $form->slug;
 
