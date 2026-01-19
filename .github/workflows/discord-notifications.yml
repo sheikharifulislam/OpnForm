@@ -1,4 +1,4 @@
-name: Discord Notifications
+name: Discord Notifications Actions
 
 on:
   issues:
