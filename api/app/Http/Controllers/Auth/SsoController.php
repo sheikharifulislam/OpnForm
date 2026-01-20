@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Enterprise\Oidc\ConnectionManager;
+use App\Enterprise\Oidc\Exceptions\OidcAccountLinkRequiredException;
 use App\Enterprise\Oidc\IdTokenVerifier;
+use App\Enterprise\Oidc\OidcLinkService;
 use App\Http\Controllers\Auth\Traits\ManagesJWT;
 use App\Http\Controllers\Controller;
 use App\Enterprise\Oidc\ProvisioningService;
@@ -17,7 +19,8 @@ class SsoController extends Controller
     public function __construct(
         private ConnectionManager $connectionManager,
         private ProvisioningService $provisioningService,
-        private IdTokenVerifier $idTokenVerifier
+        private IdTokenVerifier $idTokenVerifier,
+        private OidcLinkService $oidcLinkService
     ) {
     }
 
@@ -175,6 +178,19 @@ class SsoController extends Controller
                 'new_user' => $isNewUser,
                 'redirect_url' => $request->cookie('intended_url') ?? '/home',
             ]);
+        } catch (OidcAccountLinkRequiredException $e) {
+            $linkToken = $this->oidcLinkService->createLinkToken(
+                connectionId: $e->getConnectionId(),
+                subject: $e->getSubject(),
+                email: $e->getEmail(),
+                claims: $e->getClaims(),
+            );
+
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error' => 'oidc_account_link_required',
+                'link_token' => $linkToken,
+            ], 409);
         } catch (HttpException $e) {
             // Handle HTTP exceptions (like 403 for blocked users) - preserve status code
             return response()->json([
