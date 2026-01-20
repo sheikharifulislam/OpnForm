@@ -10,7 +10,9 @@ use App\Http\Controllers\Auth\Traits\ManagesJWT;
 use App\Http\Controllers\Controller;
 use App\Enterprise\Oidc\ProvisioningService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class SsoController extends Controller
@@ -47,6 +49,14 @@ class SsoController extends Controller
 
         try {
             $driver = $this->connectionManager->buildDriver($connection);
+
+            $requireState = (bool) data_get($connection->options, 'require_state', false);
+            if ($requireState) {
+                $state = Str::random(32);
+                Cache::put("oidc_state_{$state}", true, 600);
+                $driver->setState($state);
+            }
+
             $redirectUrl = $driver->getRedirectUrl();
 
             return response()->json([
@@ -83,6 +93,23 @@ class SsoController extends Controller
         }
 
         try {
+            $requireState = (bool) data_get($connection->options, 'require_state', false);
+            if ($requireState) {
+                $state = $request->input('state');
+                if (!$state) {
+                    return response()->json([
+                        'message' => 'Missing or invalid state. Please try again.',
+                    ], 400);
+                }
+
+                $stateValid = Cache::pull("oidc_state_{$state}");
+                if (!$stateValid) {
+                    return response()->json([
+                        'message' => 'Invalid state. Please try again.',
+                    ], 400);
+                }
+            }
+
             $driver = $this->connectionManager->buildDriver($connection);
             $driver->setRedirectUrl($connection->redirect_url);
 
