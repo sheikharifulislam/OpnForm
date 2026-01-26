@@ -100,6 +100,7 @@ import ClientOnlyWrapper from '~/components/global/ClientOnlyWrapper.vue'
 import { useComponentRegistry } from '~/composables/components/useComponentRegistry'
 import TextBlock from '~/components/forms/core/TextBlock.vue'
 import { shuffleArray } from '~/lib/utils.js'
+import { useParseMention } from '@/composables/components/useParseMention'
 
 const props = defineProps({
   block: { type: Object, required: false, default: null },
@@ -284,8 +285,26 @@ const boundProps = computed(() => {
   } else if (field.type === 'payment') {
     inputProperties.direction = form.value.layout_rtl ? 'rtl' : 'ltr'
     inputProperties.currency = field.currency
-    inputProperties.amount = field.amount
+    // Parse amount with mentions - field.amount may contain mention HTML
+    const parsedAmount = useParseMention(field.amount, true, form.value, dataForm.value)
+    const sanitizedAmount = parsedAmount
+      .replace(/<[^>]*>/g, '')
+      .replace(/,/g, '')
+      .trim()
+    const amountMatch = sanitizedAmount.match(/-?\d+(\.\d+)?/)
+    const numericAmount = amountMatch ? parseFloat(amountMatch[0]) : NaN
+    inputProperties.amount = (!isNaN(numericAmount) && numericAmount > 0) ? numericAmount : 0
     inputProperties.oauthProviderId = field.stripe_account_id
+
+    // Parse prefill fields with mentions
+    if (field.prefill_name) {
+      const parsed = useParseMention(field.prefill_name, true, form.value, dataForm.value)
+      inputProperties.prefillName = parsed.replace(/<[^>]*>/g, '').trim()
+    }
+    if (field.prefill_email) {
+      const parsed = useParseMention(field.prefill_email, true, form.value, dataForm.value)
+      inputProperties.prefillEmail = parsed.replace(/<[^>]*>/g, '').trim()
+    }
     if (props.formManager?.payment) {
       try { inputProperties.paymentData = props.formManager.payment.getPaymentData(field) } catch (e) { console.error(e) }
     }
