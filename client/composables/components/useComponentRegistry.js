@@ -29,6 +29,7 @@ const actionRegistry = new Map([
   ['ActivepiecesIntegrationActions', () => import('~/components/open/integrations/components/ActivepiecesIntegrationActions.vue')],
   ['MakeIntegrationActions', () => import('~/components/open/integrations/components/MakeIntegrationActions.vue')],
   ['PabblyIntegrationActions', () => import('~/components/open/integrations/components/PabblyIntegrationActions.vue')],
+  ['AlbatoIntegrationActions', () => import('~/components/open/integrations/components/AlbatoIntegrationActions.vue')],
 ])
 
 const providerRegistry = new Map([
